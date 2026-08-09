@@ -929,7 +929,7 @@ class UNITY_ACTION_UL_List(bpy.types.UIList):
         item : bpy.types.Action
         for i, item in enumerate(items):
             if "_Unity" in item.name and "|A|" in item.name:
-                channel  = utils.get_action_channelbag(item, slot_type="OBJECT")
+                channel = utils.get_action_channelbag(item, slot_type="OBJECT")
                 if channel and len(channel.fcurves) == 0: # no fcurves, no animation...
                     filtered[i] &= ~self.bitflag_filter_item
                 elif channel and channel.fcurves[0].data_path.startswith("key_blocks"): # only shapekey actions have key blocks...
@@ -3074,9 +3074,11 @@ def scene_panel_draw(self : bpy.types.Panel, context : bpy.types.Context):
         compositor = context.scene.node_tree
 
     if compositor:
-        grid = layout.box().grid_flow(row_major=True, columns=1, align=True)
+        compositor_group_found = False
         for node in compositor.nodes:
             if node.type == "GROUP" and utils.get_prop(node, "rl_compositor_group"):
+                grid = layout.box().grid_flow(row_major=True, columns=1, align=True)
+                compositor_group_found = True
                 menu_on = False
                 for i, socket in enumerate(node.inputs):
                     if i > 0:
@@ -3090,6 +3092,8 @@ def scene_panel_draw(self : bpy.types.Panel, context : bpy.types.Context):
                         if menu_on and T == bpy.types.NodeSocketFloat or T == bpy.types.NodeSocketColor or T == bpy.types.NodeSocketInt:
                             grid.prop(socket, "default_value", text=socket.name, slider=True)
                 break
+        if not compositor_group_found:
+            layout.label(text="Legacy Compositor", icon="INFO")
 
     box = layout.box().label(text="Tools", icon="TOOL_SETTINGS")
 

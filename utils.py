@@ -1404,10 +1404,10 @@ def get_armature_from_object(obj):
         return None
 
 
-def is_child_of(obj, test):
-    """Returns True if obj is a child or sub-child of test"""
+def is_child_of(parent, test):
+    """Returns True if test is a child or sub-child of parent"""
     while test.parent:
-        if test.parent == obj:
+        if test.parent == parent:
             return True
         test = test.parent
     return False
@@ -1420,10 +1420,8 @@ def get_topmost_object(objects):
         return objects[0]
     else:
         for obj in objects:
-            for test in objects:
-                if obj != test:
-                    if not is_child_of(obj, test):
-                        return obj
+            if obj.parent not in objects:
+                return obj
     return None
 
 
@@ -2199,7 +2197,7 @@ def make_action_slot(action, slot_type, slot_name):
     return None
 
 
-def get_action_slot(action: bpy.types.Action, slot_type: str=None, slot_id=None):
+def get_action_slot(action: bpy.types.Action, slot_type: str=None, slot_id=None, create=False):
     if action and B440():
         for slot in action.slots:
             if slot_type and slot.target_id_type == slot_type:
@@ -2207,7 +2205,7 @@ def get_action_slot(action: bpy.types.Action, slot_type: str=None, slot_id=None)
             if slot_id and slot.identifier == slot_id:
                 return slot
             # fall back to creating a slot if the type is supplied
-            if slot_type:
+            if slot_type and create:
                 action.slots.new(slot_type, slot_id if slot_id else slot_type.capitalize())
     return None
 
@@ -2249,7 +2247,7 @@ def get_slot_type_for(obj):
     return slot_type
 
 
-def set_action_slot(obj, action, slot=None):
+def set_action_slot(obj, action, slot=None, create=False):
     """Blender 4.4+ Only:
        Set the obj.animation_data.action_slot to the supplied slot or
        the first action slot with the matching slot_type"""
@@ -2259,7 +2257,7 @@ def set_action_slot(obj, action, slot=None):
             return True
         else:
             slot_type = get_slot_type_for(obj)
-            slot = get_action_slot(action, slot_type=slot_type)
+            slot = get_action_slot(action, slot_type=slot_type, create=create)
             if slot:
                 obj.animation_data.action_slot = slot
                 return True
@@ -2288,7 +2286,7 @@ def safe_get_action_slot(obj) -> bpy.types.Action:
     return None, None
 
 
-def safe_set_action(obj, action, create=True, slot=None):
+def safe_set_action(obj, action, slot=None, create=True, create_slot=False):
     result = False
     if obj:
         try:
@@ -2296,7 +2294,7 @@ def safe_set_action(obj, action, create=True, slot=None):
                 obj.animation_data_create()
             if obj.animation_data:
                 obj.animation_data.action = action
-                result = set_action_slot(obj, action, slot)
+                result = set_action_slot(obj, action, slot=slot, create=create_slot)
         except Exception as e:
             action_name = action.name if action else "None"
             log_error(f"Unable to set action {action_name} to {obj.name}", e)
@@ -2375,8 +2373,11 @@ def get_action_fcurves(action: bpy.types.Action) -> List[bpy.types.FCurve]:
     return fcurves
 
 
-def get_action_channelbag(action: bpy.types.Action, slot=None, slot_type=None):
+def get_action_channelbag(action: bpy.types.Action, slot=None, slot_type=None, create_slot=False):
+    """Warning creating slot on the fly can cause access violations"""
     if not action:
+        return None
+    if B440() and (not slot and not slot_type):
         return None
     if B440() and (slot or slot_type):
         if not action.layers:
@@ -2388,7 +2389,7 @@ def get_action_channelbag(action: bpy.types.Action, slot=None, slot_type=None):
         else:
             strip = layer.strips[0]
         if slot_type and not slot:
-            slot = get_action_slot(action, slot_type=slot_type)
+            slot = get_action_slot(action, slot_type=slot_type, create=create_slot)
         if slot:
             channelbag = strip.channelbag(slot, ensure=True)
             if channelbag:
@@ -2791,9 +2792,9 @@ def store_object_state(objects=None):
                     if material_exists(mat) and mat not in obj_state:
                         obj_state[mat] = { "name": mat.name }
                 if object_has_shape_keys(obj):
-                    obj_state[obj]["action"] = safe_get_action(obj.data.shape_keys)
+                    obj_state[obj]["action"] = safe_get_action_slot(obj.data.shape_keys)
             if obj.type == "ARMATURE":
-                obj_state[obj]["action"] = safe_get_action(obj)
+                obj_state[obj]["action"] = safe_get_action_slot(obj)
     return obj_state
 
 
@@ -2819,12 +2820,14 @@ def restore_object_state(obj_state):
                         if obj.material_slots[i].material != mat:
                             obj.material_slots[i].material = mat
                     if "action" in state:
-                        safe_set_action(obj.data.shape_keys, state["action"])
+                        action, slot = state["action"]
+                        safe_set_action(obj.data.shape_keys, action, slot=slot)
                 elif obj.type == "ARMATURE":
                     if restore_name:
                         force_armature_name(obj.data, state["names"][1])
                     if "action" in state:
-                        safe_set_action(obj, state["action"])
+                        action, slot = state["action"]
+                        safe_set_action(obj, action, slot=slot)
         elif type(item) is bpy.types.Material:
             mat: bpy.types.Material = item
             if material_exists(mat):

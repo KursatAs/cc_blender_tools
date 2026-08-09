@@ -166,7 +166,7 @@ def prep_export(context, chr_cache, new_name, objects, json_data, old_path, new_
             # remove everything not part of the character for blend file exports.
             arm = get_export_armature(chr_cache, objects)
             for obj in bpy.data.objects:
-                if not (obj == arm or obj.parent == arm or chr_cache.has_object(obj)):
+                if not (obj == arm or utils.is_child_of(arm, obj) or chr_cache.has_object(obj)):
                     utils.log_info(f"Removing {obj.name} from blend file")
                     bpy.data.objects.remove(obj)
 
@@ -1154,7 +1154,7 @@ def get_export_objects(chr_cache, include_selected = True, only_objects=None):
             for obj in chr_objects:
                 obj_cache = chr_cache.get_object_cache(obj)
                 if obj_cache.is_mesh() and not obj_cache.disabled:
-                    if obj.parent == arm:
+                    if utils.is_child_of(arm, obj):
                         utils.unhide(obj)
                         if obj not in objects:
                             utils.log_info(f"   Found Character Object: {obj.name}")
@@ -1261,7 +1261,8 @@ def create_T_pose_action(arm, objects, export_strips):
     # create T-Pose action
     if "0_T-Pose" not in bpy.data.actions and utils.pose_mode_to(arm):
         action : bpy.types.Action = bpy.data.actions.new("0_T-Pose")
-        utils.safe_set_action(arm, action)
+        slot, channel = rigutils.add_action_ob_slot_channelbag(action, arm, reuse=True, create=True)
+        utils.safe_set_action(arm, action, slot=slot)
 
         bones.select_all_bones(arm, select=True, clear_active=True)
 
@@ -1278,7 +1279,8 @@ def create_T_pose_action(arm, objects, export_strips):
     # or re-use T-Pose action
     else:
         action = bpy.data.actions["0_T-Pose"]
-        utils.safe_set_action(arm, action)
+        slot, channel = rigutils.add_action_ob_slot_channelbag(action, arm, reuse=True, create=True)
+        utils.safe_set_action(arm, action, slot=slot)
 
     # push T-Pose to NLA if exporting strips
     if export_strips:
@@ -2237,7 +2239,7 @@ def export_rigify(self, context, chr_cache, export_anim, file_path, include_sele
     clone_id = utils.generate_random_id(10)
 
     export_rig, export_objects, \
-    vertex_group_map, t_pose_action = rigging.prep_rigify_export(chr_cache,
+    vertex_group_map, t_pose_action, t_pose_slot = rigging.prep_rigify_export(chr_cache,
                                                 export_anim, baked_actions,
                                                 include_t_pose=prefs.rigify_export_t_pose,
                                                 objects=objects,
@@ -2281,7 +2283,7 @@ def export_rigify(self, context, chr_cache, export_anim, file_path, include_sele
         bones.clear_pose(export_rig)
 
         # put t-pose back on armature
-        utils.safe_set_action(export_rig, t_pose_action)
+        utils.safe_set_action(export_rig, t_pose_action, slot=t_pose_slot)
 
         bpy.context.view_layer.update()
 

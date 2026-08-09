@@ -34,11 +34,17 @@ Links
 ## Changelog
 
 ### 2.4.3
+- Minimum Blender version 4.5.
+- Fix to rigid body collider scale.
+- Fix to possible crash on import resetting shape-key ranges.
+- Fix to Rigify reparenting.
+- Fix to convert generic character.
+- Fix to export converted character (humanoid) with null link_id.
 - Extra checks for mesh objects with shape keys.
 - Fix to DataLink avatar lookup.
 - Update mesh modify retains mesh display settings.
-- Update import Empty based prop structures:
-    - Not all functionality with work with them, but should at least import with animations and setup correctly.
+- Update for iClone 8.74 Prop exports:
+    - Motion updates and motion blending for Props currently disabled.
 - Fix to RTX custom PBR shader type.
 - Fix to specular value on Traditional materials.
 - Added gamma correction parameter to skin and hair shaders.

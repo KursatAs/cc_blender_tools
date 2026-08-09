@@ -53,7 +53,7 @@ def name_in_data_paths(action, name, slot_type=None):
     return False
 
 
-def name_in_pose_bone_data_paths_regex(action, name, slot_type=None):
+def name_in_data_paths_regex(action, name, slot_type=None):
     channel = utils.get_action_channelbag(action, slot_type=slot_type)
     if channel:
         name = ".*" + name
@@ -323,7 +323,8 @@ def find_source_actions(source_action, source_rig=None):
 
     return actions
 
-
+"""
+# TODO: No longer used.
 def get_main_body_action(source_actions):
     # find the "Body" action
     for obj_id in source_actions["keys"]:
@@ -348,8 +349,6 @@ def get_main_body_action(source_actions):
         utils.log_info(f" - No shape key actions in this Motion set!")
     return action_with_most_keys
 
-
-"""
 # TODO: No longer used.
 def apply_source_actions(dst_rig, source_actions, copy=False,
                          motion_id=None, motion_prefix=None,
@@ -462,9 +461,8 @@ def apply_source_key_actions(dst_rig, source_actions, all_matching=False, copy=F
                         obj_used.append(obj)
                         key_actions[obj_id] = (action, old_action)
     return key_actions
-"""
 
-
+# TODO: No longer used.
 def obj_has_action_shape_keys(obj, action: bpy.types.Action):
     channel = utils.get_action_channelbag(action, slot_type="KEY")
     if channel:
@@ -475,6 +473,7 @@ def obj_has_action_shape_keys(obj, action: bpy.types.Action):
                         return True
     return False
 
+"""
 
 def get_rig_id(rig):
     if rig:
@@ -1043,7 +1042,7 @@ def reset_nla_tracks(obj):
     return track
 
 
-def create_key_proxy_object(obj_id, action: bpy.types.Action=None,
+def create_key_proxy_object(obj_id, action: bpy.types.Action=None, slot=None,
                             shape_keys=None, parent=None, channel=None):
     # create object
     bpy.ops.mesh.primitive_cube_add(size=0.1, enter_editmode=False,
@@ -1071,14 +1070,15 @@ def create_key_proxy_object(obj_id, action: bpy.types.Action=None,
                 key.slider_min = -1.5
 
     elif action:
-        channel = utils.get_action_channelbag(action, slot_type="KEY")
-        for fcurve in channel.fcurves:
-            data_path = fcurve.data_path
-            if data_path.startswith("key_blocks["):
-                key_name = data_path[12:-8]
-                key = obj.shape_key_add(name=key_name)
-                key.slider_max = 1.5
-                key.slider_min = -1.5
+        channel = utils.get_action_channelbag(action, slot=slot)
+        if channel:
+            for fcurve in channel.fcurves:
+                data_path = fcurve.data_path
+                if data_path.startswith("key_blocks["):
+                    key_name = data_path[12:-8]
+                    key = obj.shape_key_add(name=key_name)
+                    key.slider_max = 1.5
+                    key.slider_min = -1.5
 
     elif shape_keys:
         if "Basis" in shape_keys:
@@ -1100,20 +1100,20 @@ def get_shape_key_action_objects(rigify_rig, source_rig, source_action=None, sha
 
         if source_actions["slotted"]:
             channelbags = utils.get_action_channelbags(source_action)
-            for channel in channelbags:
-                slot = channel.slot
+            for channelbag in channelbags:
+                slot = channelbag.slot
                 if slot.target_id_type == "KEY":
                     obj_id = slot.name_display
-                    obj = create_key_proxy_object(obj_id, parent=source_rig, channel=channel)
+                    obj = create_key_proxy_object(obj_id, parent=source_rig, channel=channelbag)
                     utils.safe_set_action(obj.data.shape_keys, source_action, slot=slot)
                     objects.append(obj)
-
         else:
             for obj_id, obj_action in source_actions["keys"].items():
                 # we don't need all the objects, just these three
                 if obj_id in ["Body", "Tongue", "Eye"]:
-                    obj = create_key_proxy_object(obj_id, action=obj_action, parent=source_rig)
-                    utils.safe_set_action(obj.data.shape_keys, obj_action)
+                    slot = utils.get_action_slot(obj_action, slot_type="OBJECT")
+                    obj = create_key_proxy_object(obj_id, action=obj_action, slot=slot, parent=source_rig)
+                    utils.safe_set_action(obj.data.shape_keys, obj_action, slot=slot)
                     objects.append(obj)
 
     elif shape_keys:
@@ -3577,7 +3577,7 @@ def load_separate_actions(rig: bpy.types.Object, action: bpy.types.Action, move=
                 # remove actions that have no assigned keys
                 if has_keys:
                     keep_actions.append(key_action)
-                    utils.safe_set_action(obj.data.shape_keys, key_action, create=True, slot=key_slot)
+                    utils.safe_set_action(obj.data.shape_keys, key_action, slot=key_slot, create=True)
                 else:
                     remove_actions.append(key_action)
                     utils.safe_set_action(obj.data.shape_keys, None)
@@ -3794,7 +3794,7 @@ def refactor_to_slotted_action(objects, actions):
     # ignore empty structures actions for now
     exceptions = []
     for obj in objects:
-        if utils.object_exists_is_empty(obj) and obj.parent == None:
+        if utils.object_exists_is_empty(obj) and obj.parent == None: # (top level empties)
             for child in utils.get_child_objects(obj):
                 action = utils.safe_get_action(child)
                 if action and action not in exceptions:
@@ -4346,7 +4346,7 @@ def add_slot_channels_to_rig_motion(rig, obj, slot_type, action, reuse=False, cl
 
 
 def copy_channels_to_rig_motion(rig, obj, slot_type, src_action, src_slot, dst_action):
-    src_channelbag = utils.get_action_channelbag(src_action, src_slot)
+    src_channelbag = utils.get_action_channelbag(src_action, slot=src_slot)
     dst_action, dst_slot, dst_channel = add_slot_channels_to_rig_motion(rig, obj, slot_type, dst_action, reuse=True, clear=True)
 
     # copy the source fcurves into the dst_channel
@@ -4757,7 +4757,7 @@ def resample_blend(chr_rlx_cache, rig,
                           use_mask_bones, blend_mask_bones,
                           processed_fcurves=processed_fcurves)
 
-        blend_data_curves(motion_rig_channel, stored_rig_channel,
+        blend_data_curves(rig, motion_rig_channel, stored_rig_channel,
                           from_frame, to_frame,
                           use_blend, overwrite, overall_strength,
                           blend_in_frames, blend_out_frames,
@@ -4793,14 +4793,14 @@ def resample_blend(chr_rlx_cache, rig,
     #
     if rig.type == "LIGHT" or rig.type == "CAMERA":
 
-        blend_data_curves(motion_rig_channel, stored_rig_channel,
+        blend_data_curves(rig, motion_rig_channel, stored_rig_channel,
                           from_frame, to_frame,
                           use_blend, overwrite, overall_strength,
                           blend_in_frames, blend_out_frames,
                           blend_in_data, blend_out_data,
                           processed_fcurves=processed_fcurves)
 
-        blend_data_curves(motion_data_channel, stored_data_channel,
+        blend_data_curves(rig, motion_data_channel, stored_data_channel,
                           from_frame, to_frame,
                           use_blend, overwrite, overall_strength,
                           blend_in_frames, blend_out_frames,
@@ -5147,7 +5147,7 @@ def blend_key_curves(motion_channel, stored_channel,
                 reset_fcurve_interpolation(motion_key_curve)
 
 
-def blend_data_curves(motion_channel, stored_channel,
+def blend_data_curves(rig, motion_channel, stored_channel,
                       from_frame, to_frame,
                       use_blend, overwrite, overall_strength,
                       blend_in_frames, blend_out_frames,
@@ -5192,6 +5192,16 @@ def blend_data_curves(motion_channel, stored_channel,
         data_path, array_index = path_id
         motion_data_curve = curves[0]
         stored_data_curve = curves[1]
+        default_eval = 0.0
+        # fetch default values (for missing fcurves) from the rig itself
+        try:
+            prop = rig.path_resolve(data_path)
+            subscriptable = hasattr(prop, "__getitem__")
+            if subscriptable:
+                default_eval = prop[array_index]
+            else:
+                default_eval = prop
+        except: ...
 
         if processed_fcurves:
             if motion_data_curve and motion_data_curve in processed_fcurves: continue
@@ -5233,12 +5243,12 @@ def blend_data_curves(motion_channel, stored_channel,
 
         # evaluate the motion curve at each frame ...
         for f, frame in enumerate(sorted_frames):
-            motion_value = evaluate_action_curve(motion_data_curve, frame)
+            motion_value = evaluate_action_curve(motion_data_curve, frame, default_value=default_eval)
 
             # if blending, apply motion blend:
             if use_blend or overwrite:
                 blend_strength = overall_strength if use_blend else 1.0
-                stored_value = evaluate_action_curve(stored_data_curve, frame)
+                stored_value = evaluate_action_curve(stored_data_curve, frame, default_value=default_eval)
 
                 if frame < from_frame or frame > to_frame:
                     blend_strength = 0
@@ -5500,11 +5510,11 @@ def evaluate_action_bone_transform_set(transform_set: tuple, frame: int):
     return loc, rot, sca
 
 
-def evaluate_action_curve(key_curve: tuple, frame: int):
+def evaluate_action_curve(key_curve: tuple, frame: int, default_value=0.0):
     try:
         value = key_curve.evaluate(frame)
     except:
-        value = 0.0
+        value = default_value
     return value
 #endregion
 

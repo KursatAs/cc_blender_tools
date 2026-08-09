@@ -444,7 +444,7 @@ def setup_scene_default(context, scene_type):
                 context.scene.cycles.transparent_max_bounces = 100
 
 
-            remove_all_lights(False)
+            remove_all_lights()
             restore_hidden_camera()
 
             key1 = add_point_light("Light", None,
@@ -465,7 +465,7 @@ def setup_scene_default(context, scene_type):
 
         elif scene_type == "MATCAP":
 
-            remove_all_lights(False)
+            remove_all_lights()
             restore_hidden_camera()
 
             if shading:
@@ -505,7 +505,7 @@ def setup_scene_default(context, scene_type):
             if context.scene.cycles.transparent_max_bounces < 100:
                 context.scene.cycles.transparent_max_bounces = 100
 
-            remove_all_lights(False)
+            remove_all_lights()
             restore_hidden_camera()
             container = add_light_container()
 
@@ -596,7 +596,7 @@ def setup_scene_default(context, scene_type):
             if context.scene.cycles.transparent_max_bounces < 100:
                 context.scene.cycles.transparent_max_bounces = 100
 
-            remove_all_lights(False)
+            remove_all_lights()
             restore_hidden_camera()
             container = add_light_container()
 
@@ -679,7 +679,7 @@ def setup_scene_default(context, scene_type):
             if context.scene.cycles.transparent_max_bounces < 100:
                 context.scene.cycles.transparent_max_bounces = 100
 
-            remove_all_lights(True)
+            remove_all_lights()
             restore_hidden_camera()
             container = add_light_container()
 
@@ -754,7 +754,7 @@ def setup_scene_default(context, scene_type):
             if context.scene.cycles.transparent_max_bounces < 100:
                 context.scene.cycles.transparent_max_bounces = 100
 
-            remove_all_lights(True)
+            remove_all_lights()
             restore_hidden_camera()
             container = add_light_container()
 
@@ -828,7 +828,7 @@ def setup_scene_default(context, scene_type):
             if context.scene.cycles.transparent_max_bounces < 100:
                 context.scene.cycles.transparent_max_bounces = 100
 
-            remove_all_lights(True)
+            remove_all_lights()
             restore_hidden_camera()
             container = add_light_container()
 
@@ -892,7 +892,7 @@ def setup_scene_default(context, scene_type):
             if context.scene.cycles.transparent_max_bounces < 100:
                 context.scene.cycles.transparent_max_bounces = 100
 
-            remove_all_lights(True)
+            remove_all_lights()
             restore_hidden_camera()
             container = add_light_container()
 
@@ -961,7 +961,7 @@ def setup_scene_default(context, scene_type):
             if context.scene.cycles.transparent_max_bounces < 100:
                 context.scene.cycles.transparent_max_bounces = 100
 
-            remove_all_lights(True)
+            remove_all_lights()
             restore_hidden_camera()
             container = add_light_container()
 
@@ -1035,7 +1035,7 @@ def setup_scene_default(context, scene_type):
             if context.scene.cycles.transparent_max_bounces < 100:
                 context.scene.cycles.transparent_max_bounces = 100
 
-            remove_all_lights(True)
+            remove_all_lights()
             restore_hidden_camera()
             container = add_light_container()
 
@@ -1107,7 +1107,7 @@ def setup_scene_default(context, scene_type):
             if context.scene.cycles.transparent_max_bounces < 100:
                 context.scene.cycles.transparent_max_bounces = 100
 
-            remove_all_lights(False)
+            remove_all_lights()
             restore_hidden_camera()
             container = add_light_container()
 
@@ -1183,7 +1183,7 @@ def setup_scene_default(context, scene_type):
             if context.scene.cycles.transparent_max_bounces < 100:
                 context.scene.cycles.transparent_max_bounces = 100
 
-            remove_all_lights(False)
+            remove_all_lights()
             restore_hidden_camera()
             container = add_light_container()
 
@@ -1283,7 +1283,7 @@ def setup_scene_default(context, scene_type):
             if context.scene.cycles.transparent_max_bounces < 100:
                 context.scene.cycles.transparent_max_bounces = 100
 
-            remove_all_lights(False)
+            remove_all_lights()
             restore_hidden_camera()
             container = add_light_container()
 
@@ -1403,7 +1403,7 @@ def setup_scene_default(context, scene_type):
             if context.scene.cycles.transparent_max_bounces < 100:
                 context.scene.cycles.transparent_max_bounces = 100
 
-            remove_all_lights(False)
+            remove_all_lights()
             restore_hidden_camera()
             container = add_light_container()
 
@@ -1534,7 +1534,7 @@ def setup_scene_default(context, scene_type):
             if context.scene.cycles.transparent_max_bounces < 100:
                 context.scene.cycles.transparent_max_bounces = 100
 
-            remove_all_lights(False)
+            remove_all_lights()
             restore_hidden_camera()
             container = add_light_container()
 
@@ -1646,7 +1646,7 @@ def setup_scene_default(context, scene_type):
             if context.scene.cycles.transparent_max_bounces < 100:
                 context.scene.cycles.transparent_max_bounces = 100
 
-            remove_all_lights(False)
+            remove_all_lights()
             restore_hidden_camera()
             container = add_light_container()
 
@@ -1757,7 +1757,7 @@ def setup_scene_default(context, scene_type):
             if context.scene.cycles.transparent_max_bounces < 100:
                 context.scene.cycles.transparent_max_bounces = 100
 
-            remove_all_lights(False)
+            remove_all_lights()
             restore_hidden_camera()
             container = add_light_container()
 
@@ -1867,7 +1867,7 @@ def setup_scene_default(context, scene_type):
             if context.scene.cycles.transparent_max_bounces < 100:
                 context.scene.cycles.transparent_max_bounces = 100
 
-            remove_all_lights(False)
+            remove_all_lights()
             restore_hidden_camera()
             container = add_light_container()
 
@@ -1988,7 +1988,7 @@ def setup_scene_default(context, scene_type):
             if context.scene.cycles.transparent_max_bounces < 100:
                 context.scene.cycles.transparent_max_bounces = 100
 
-            remove_all_lights(False)
+            remove_all_lights()
             head_pos, camera_pos = target_head(context, 1.0)
             camera, camera_target = camera_setup(context, camera_pos, head_pos)
             context.scene.camera = camera

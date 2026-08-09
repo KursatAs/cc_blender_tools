@@ -2073,7 +2073,7 @@ def load_csv(chr_cache, file_path):
                 keys = facerig_data.ARKIT_SHAPE_KEY_TARGETS[facial_profile].keys()
                 key_action = utils.make_action(f"{chr_cache.get_name()}_ARKit_Proxy_Head", slot_type="KEY", clear=True, reuse=True)
                 arm_action = utils.make_action(f"{chr_cache.get_name()}_ARKit_Proxy", slot_type="OBJECT", clear=True, reuse=True)
-                key_channel = utils.get_action_channelbag(key_action, slot_type="KEY")
+                key_slot, key_channel = rigutils.add_action_key_slot_channelbag(key_action, proxy_mesh, reuse=True, clear=True)
                 if key_channel:
                     for key in keys:
                         fcurve = key_channel.fcurves.new(f"key_blocks[\"{key}\"].value")
@@ -2081,8 +2081,8 @@ def load_csv(chr_cache, file_path):
                             if tcurve.name.lower() == key.lower():
                                 tcurve.to_fcurve(fcurve)
                                 break
-                utils.safe_set_action(proxy_mesh.data.shape_keys, key_action)
-            bone_channel = utils.get_action_channelbag(arm_action, slot_type="OBJECT")
+                utils.safe_set_action(proxy_mesh.data.shape_keys, key_action, slot=key_slot)
+            bone_slot, bone_channel = rigutils.add_action_ob_slot_channelbag(arm_action, proxy_rig, reuse=True, clear=True)
             if bone_channel:
                 for tcurve_name, bone_def in facerig_data.ARK_BONE_TARGETS.items():
                     for tcurve in tcurves:
@@ -2096,7 +2096,7 @@ def load_csv(chr_cache, file_path):
                             data_path = bone.path_from_id(prop)
                             fcurve = bone_channel.fcurves.new(data_path, index=index)
                             tcurve.to_fcurve(fcurve, rotation)
-            utils.safe_set_action(proxy_rig, arm_action)
+            utils.safe_set_action(proxy_rig, arm_action, slot=bone_slot)
 
 
 def get_arkit_proxy_prop(proxy_rig, prop):

@@ -279,14 +279,12 @@ def init_shape_key_range(obj):
 
         # re-set a value in the shapekey action keyframes to force
         # the shapekey action to update to the new ranges:
-        try:
-            action = utils.safe_get_action(obj.data.shape_keys)
-            channel = utils.get_action_channelbag(action, slot_type="KEY")
-            if channel:
+        action, slot = utils.safe_get_action_slot(obj.data.shape_keys)
+        channel = utils.get_action_channelbag(action, slot=slot)
+        if channel and len(channel.fcurves) > 0:
+            if len(channel.fcurves[0].keyframe_points) > 0:
                 co = channel.fcurves[0].keyframe_points[0].co
                 channel.fcurves[0].keyframe_points[0].co = co
-        except:
-            pass
 
 # region detect_generation
 def detect_generation(chr_cache, rig, json_data, character_id):
@@ -1596,8 +1594,9 @@ class CC3Import(bpy.types.Operator):
                     import_flags = import_flags | ImportFlags.RL
                 if obj not in lights:
                     lights.append(obj)
-            elif utils.object_exists_is_empty(obj):
-                    empties.append(obj)
+            elif utils.object_exists_is_empty(obj) and obj.children:
+                # only include empties with childen
+                empties.append(obj)
         return armatures, rl_armatures, empties, cameras, lights, import_flags
 
 
