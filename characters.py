@@ -281,18 +281,16 @@ def convert_generic_to_non_standard(objects, file_path=None, type_override=None,
     # get generic objects
     non_chr_objects = [ obj for obj in objects
                         if props.get_object_cache(obj) is None
-                            and (obj.type == "MESH"
-                                 or obj.type == "EMPTY")]
-    active_non_chr_object = utils.get_active_object()
-    if active_non_chr_object not in non_chr_objects:
-        active_non_chr_object = non_chr_objects[0]
+                            and (obj.type == "ARMATURE" or
+                                 obj.type == "MESH" or
+                                 obj.type == "EMPTY")]
 
     # select all child objects of the current selected objects
     utils.try_select_objects(non_chr_objects, True)
     for obj in non_chr_objects:
         utils.try_select_child_objects(obj)
 
-    objects = bpy.context.selected_objects
+    objects = bpy.context.selected_objects.copy()
     chr_rig = utils.get_armature_from_objects(objects)
 
     utils.log_info(f"Generic character objects:")

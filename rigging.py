@@ -1537,38 +1537,42 @@ def reparent_to_rigify(self, chr_cache, cc3_rig, rigify_rig, bone_mapping):
 
         for obj in utils.get_child_objects(cc3_rig):
 
-            hidden = not obj.visible_get()
-            if hidden:
-                utils.unhide(obj)
-            obj_cache = chr_cache.get_object_cache(obj)
+            if obj.parent == cc3_rig: # reparent only if direct parent was rig, sub children should follow these
 
-            if obj.parent == cc3_rig: # reparent only if parent was rig
+                hidden = not obj.visible_get()
+                if hidden:
+                    utils.unhide(obj)
+                obj_cache = chr_cache.get_object_cache(obj)
+
                 if utils.try_select_object(obj, True) and utils.set_active_object(obj):
                     bpy.ops.object.parent_clear(type = "CLEAR_KEEP_TRANSFORM")
 
-            # only the body and face objects will generate the automatic weights for the face rig.
-            if (chr_cache.rigified_full_face_rig and
-                utils.object_exists_is_mesh(obj) and
-                len(obj.data.vertices) >= 2 and
-                is_face_object(obj_cache, obj) and
-                obj.name != "CC_Base_Tongue"):
+                # only the body and face objects will generate the automatic weights for the face rig.
+                if (chr_cache.rigified_full_face_rig and
+                    utils.object_exists_is_mesh(obj) and
+                    len(obj.data.vertices) >= 2 and
+                    is_face_object(obj_cache, obj) and
+                    obj.name != "CC_Base_Tongue"):
 
-                obj_result = try_parent_auto(chr_cache, rigify_rig, obj)
-                if obj_result < result:
-                    result = obj_result
+                    utils.log_info(f"Reparenting (face object with weights): {obj.name}")
 
-            else:
+                    obj_result = try_parent_auto(chr_cache, rigify_rig, obj)
+                    if obj_result < result:
+                        result = obj_result
 
-                if obj.parent == cc3_rig: # reparent only if parent was rig
+                else:
+
                     if utils.try_select_object(rigify_rig) and utils.set_active_object(rigify_rig):
                         bpy.ops.object.parent_set(type = "OBJECT", keep_transform = True)
 
-                arm_mod: bpy.types.ArmatureModifier = modifiers.get_armature_modifier(obj, create=True, armature=rigify_rig)
-                if arm_mod:
-                    arm_mod.object = rigify_rig
+                    utils.log_info(f"Reparenting: {obj.name}")
 
-            if hidden:
-                utils.hide(obj)
+                    arm_mod: bpy.types.ArmatureModifier = modifiers.get_armature_modifier(obj, create=True, armature=rigify_rig)
+                    if arm_mod:
+                        arm_mod.object = rigify_rig
+
+                if hidden:
+                    utils.hide(obj)
 
     utils.log_recess()
     return result
@@ -3149,7 +3153,7 @@ def clear_drivers_and_constraints(rig):
             pose_bone.custom_shape = None
 
 
-def generate_export_rig(chr_cache, use_t_pose=False, t_pose_action=None,
+def generate_export_rig(chr_cache, use_t_pose=False, t_pose_action=None, t_pose_slot=None,
                         link_target=False, bone_naming="CC"):
 
     rigify_rig = chr_cache.get_armature()
@@ -3331,7 +3335,7 @@ def generate_export_rig(chr_cache, use_t_pose=False, t_pose_action=None,
 
         # add t-pose action to armature
         if t_pose_action:
-            utils.safe_set_action(export_rig, t_pose_action)
+            utils.safe_set_action(export_rig, t_pose_action, slot=t_pose_slot)
 
         bones.select_all_bones(export_rig, select=True, clear_active=True)
 
@@ -3458,7 +3462,7 @@ def adv_bake_rigify_for_export(chr_cache, export_rig, objects, accessory_map):
     return armature_action, shape_key_actions
 
 
-def adv_export_pair_rigs(chr_cache, include_t_pose=False, t_pose_action=None, link_target=False, bone_naming="CC"):
+def adv_export_pair_rigs(chr_cache, include_t_pose=False, t_pose_action=None, t_pose_slot=None, link_target=False, bone_naming="CC"):
     prefs = vars.prefs()
 
     # generate export rig
@@ -3466,6 +3470,7 @@ def adv_export_pair_rigs(chr_cache, include_t_pose=False, t_pose_action=None, li
     export_rig, vertex_group_map, accessory_map = generate_export_rig(chr_cache,
                                                                       use_t_pose=include_t_pose,
                                                                       t_pose_action=t_pose_action,
+                                                                      t_pose_slot=t_pose_slot,
                                                                       link_target=link_target,
                                                                       bone_naming=bone_naming)
     chr_cache.rig_export_rig = export_rig
@@ -3491,14 +3496,17 @@ def prep_rigify_export(chr_cache, bake_animation, baked_actions: list,
 
     # create empty T-Pose action
     t_pose_action: bpy.types.Action = None
+    t_pose_slot = None
     if include_t_pose:
         if "0_T-Pose" in bpy.data.actions:
             bpy.data.actions.remove(bpy.data.actions["0_T-Pose"])
         t_pose_action = bpy.data.actions.new("0_T-Pose")
+        t_pose_slot, t_pose_channel = rigutils.add_action_ob_slot_channelbag(t_pose_action, export_rig, reuse=True, create=True)
 
     export_rig, vertex_group_map, accessory_map = adv_export_pair_rigs(chr_cache,
                                                                        include_t_pose=include_t_pose,
                                                                        t_pose_action=t_pose_action,
+                                                                       t_pose_slot=t_pose_slot,
                                                                        link_target=False,
                                                                        bone_naming=bone_naming)
     export_rig.location = (0,0,0)
@@ -3559,7 +3567,7 @@ def prep_rigify_export(chr_cache, bake_animation, baked_actions: list,
                 clone.name = obj_name
                 child.data.name = f"{mesh_name}_{clone_id}"
                 clone.data.name = mesh_name
-                if child.parent == rigify_rig: # reparent only if parent was rigify_rig
+                if child.parent == rigify_rig: # reparent only if direct parent was rigify_rig
                     clone.parent = export_rig
                 clones.append(clone)
                 mod = modifiers.get_object_modifier(clone, "ARMATURE")
@@ -3579,7 +3587,7 @@ def prep_rigify_export(chr_cache, bake_animation, baked_actions: list,
 
     rigutils.select_rig(export_rig)
     export_objects = [export_rig] + clones
-    return export_rig, export_objects, vertex_group_map, t_pose_action
+    return export_rig, export_objects, vertex_group_map, t_pose_action, t_pose_slot
 
 
 def get_motion_export_objects(objects):
@@ -3812,23 +3820,23 @@ def bake_shape_key_animation(rig, objects):
         # write actions/slots and fcurves for the shape key key-frames
         for obj in shape_key_objects:
             if prefs.use_action_slots():
-                slot, channelbag = rigutils.add_action_key_slot_channelbag(rig_action, obj, reuse=True, clear=True)
-                utils.safe_set_action(obj.data.shape_keys, rig_action, create=True, slot=slot)
+                obj_slot, obj_channelbag = rigutils.add_action_key_slot_channelbag(rig_action, obj, reuse=True, clear=True)
+                utils.safe_set_action(obj.data.shape_keys, rig_action, create=True, slot=obj_slot)
                 key_cache = frame_cache[obj.name]
                 for key_name, cache_data in key_cache.items():
                     data_path = f"key_blocks[\"{key_name}\"].value"
-                    fcurve: bpy.types.FCurve = channelbag.fcurves.new(data_path)
+                    fcurve: bpy.types.FCurve = obj_channelbag.fcurves.new(data_path)
                     fcurve.keyframe_points.add(num_frames)
                     fcurve.keyframe_points.foreach_set("co", cache_data)
                     rigutils.reset_fcurve_interpolation(fcurve)
             else:
                 key_action = bpy.data.actions.new("Key")
-                slot, channelbag = rigutils.add_action_key_slot_channelbag(key_action, obj, reuse=True, clear=True)
-                utils.safe_set_action(obj.data.shape_keys, key_action)
+                key_slot, key_channelbag = rigutils.add_action_key_slot_channelbag(key_action, obj, reuse=True, clear=True)
+                utils.safe_set_action(obj.data.shape_keys, key_action, slot=key_slot)
                 key_cache = frame_cache[obj.name]
                 for key_name, cache_data in key_cache.items():
                     data_path = f"key_blocks[\"{key_name}\"].value"
-                    fcurve: bpy.types.FCurve = channelbag.fcurves.new(data_path)
+                    fcurve: bpy.types.FCurve = key_channelbag.fcurves.new(data_path)
                     fcurve.keyframe_points.add(num_frames)
                     fcurve.keyframe_points.foreach_set("co", cache_data)
                     rigutils.reset_fcurve_interpolation(fcurve)

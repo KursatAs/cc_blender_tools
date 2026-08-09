@@ -169,10 +169,15 @@ class LinkActor():
         return None
 
     def get_link_id(self):
-        if self.object:
-            return utils.get_rl_link_id(self.object)
-        elif self.actor_cache:
+        if self.actor_cache:
             return self.actor_cache.get_link_id()
+        elif self.object:
+            obj_link_id = utils.get_rl_link_id(self.object)
+            cache_link_id = self.actor_cache.get_link_id() if self.actor_cache else None
+            if cache_link_id and obj_link_id != cache_link_id:
+                utils.set_rl_link_id(self.object, cache_link_id)
+                return cache_link_id
+            return obj_link_id if obj_link_id else cache_link_id if cache_link_id else None
         return None
 
     def get_primary_object(self):
@@ -880,38 +885,6 @@ def get_datalink_rig_action(rig, motion_id=None, slotted=False):
     return action
 
 
-# TODO Not used
-def get_datalink_obj_actions(obj, motion_id=None):
-    prefs = vars.prefs()
-
-    if not motion_id:
-        motion_id = "DataLink"
-
-    name = obj.name
-
-    T = utils.get_slot_type_for(obj.data)
-    ob_name = rigutils.generate_action_name(name, "O", "", motion_id, LINK_DATA.motion_prefix)
-    data_name = rigutils.generate_action_name(name, T[0], "", motion_id, LINK_DATA.motion_prefix)
-
-    if ob_name in bpy.data.actions:
-        ob_action = bpy.data.actions[ob_name]
-    else:
-        ob_action = bpy.data.actions.new(ob_name)
-    utils.safe_set_action(obj, ob_action)
-    ob_action.use_fake_user = LINK_DATA.use_fake_user
-
-    data_action = ob_action
-    if not prefs.use_action_slots():
-        if data_name in bpy.data.actions:
-            data_action = bpy.data.actions[data_name]
-        else:
-            data_action = bpy.data.actions.new(data_name)
-        utils.safe_set_action(obj.data, data_action)
-        data_action.use_fake_user = LINK_DATA.use_fake_user
-
-    return ob_action, data_action
-
-
 def prep_pose_actor(actor: LinkActor, start_frame, end_frame):
     """Prepares the character rig for keyframing poses from the pose data stream."""
     props = vars.props()
@@ -1450,10 +1423,8 @@ def write_sequence_actions(actor: LinkActor, num_frames, start_frame):
         elif actor.get_type() == "LIGHT":
 
             light = actor.object
-            ob_action = utils.safe_get_action(light)
-            light_action = utils.safe_get_action(light.data)
-            ob_slot = utils.get_action_slot(ob_action, slot_type="OBJECT")
-            light_slot = utils.get_action_slot(light_action, slot_type="LIGHT")
+            ob_action, ob_slot = utils.safe_get_action_slot(light)
+            light_action, light_slot = utils.safe_get_action_slot(light.data)
             write_action_cache_curve(ob_action, actor.cache["transform"], "loc", "location", num_frames, "Location", slot=ob_slot, reduce=True)
             write_action_rotation_cache_curve(ob_action, actor.cache["transform"], "rot", light, num_frames, slot=ob_slot, reduce=True)
             write_action_cache_curve(ob_action, actor.cache["transform"], "sca", "scale", num_frames, "Scale", slot=ob_slot, reduce=True)
@@ -1473,10 +1444,8 @@ def write_sequence_actions(actor: LinkActor, num_frames, start_frame):
         elif actor.get_type() == "CAMERA":
 
             camera = actor.object
-            ob_action = utils.safe_get_action(camera)
-            cam_action = utils.safe_get_action(camera.data)
-            ob_slot = utils.get_action_slot(ob_action, slot_type="OBJECT")
-            cam_slot = utils.get_action_slot(cam_action, slot_type="CAMERA")
+            ob_action, ob_slot = utils.safe_get_action_slot(camera)
+            cam_action, cam_slot = utils.safe_get_action_slot(camera.data)
             write_action_cache_curve(ob_action, actor.cache["transform"], "loc", "location", num_frames, "Location", slot=ob_slot, reduce=True)
             write_action_rotation_cache_curve(ob_action, actor.cache["transform"], "rot", camera, num_frames, slot=ob_slot, reduce=True)
             write_action_cache_curve(ob_action, actor.cache["transform"], "sca", "scale", num_frames, "Scale", slot=ob_slot, reduce=True)

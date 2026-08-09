@@ -613,7 +613,7 @@ def decode_rlx_light(light_data, light: bpy.types.Object=None, container=None):
         rlx_cache.update_object(light)
 
     utils.safe_set_action(light, ob_action, slot=ob_slot)
-    utils.safe_set_action(light.data, light_action, light_slot)
+    utils.safe_set_action(light.data, light_action, slot=light_slot)
 
     light.location = loc
     utils.set_transform_rotation(light, rot)

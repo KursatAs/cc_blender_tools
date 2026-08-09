@@ -1777,6 +1777,9 @@ class CC3StagingCache(bpy.types.PropertyGroup):
     def get_link_id(self):
         if not self.link_id:
             self.link_id = utils.generate_random_id(20)
+        pri = self.get_primary_object()
+        if pri and utils.get_rl_link_id(pri) != self.link_id:
+            utils.set_rl_link_id(pri, self.link_id)
         return self.link_id
 
     def get_name(self):
@@ -2103,6 +2106,9 @@ class CC3CharacterCache(bpy.types.PropertyGroup):
     def get_link_id(self):
         if not self.link_id:
             self.link_id = utils.generate_random_id(20)
+        pri = self.get_primary_object()
+        if pri and utils.get_rl_link_id(pri) != self.link_id:
+            utils.set_rl_link_id(pri, self.link_id)
         return self.link_id
 
     def get_name(self):
@@ -3808,7 +3814,7 @@ class CC3ImportProps(bpy.types.PropertyGroup):
                     if utils.action_exists(action):
                         slot_id = action_store.object_slot_id
                         slot = utils.get_action_slot(action, slot_id=slot_id)
-                        channelbag = utils.get_action_channelbag(action, slot)
+                        channelbag = utils.get_action_channelbag(action, slot=slot)
                         return action, slot, channelbag
         return None, None, None
 
@@ -3823,7 +3829,7 @@ class CC3ImportProps(bpy.types.PropertyGroup):
                     if utils.action_exists(action):
                         slot_id = action_store.object_slot_id
                         slot = utils.get_action_slot(action, slot_id=slot_id)
-                        channelbag = utils.get_action_channelbag(action, slot)
+                        channelbag = utils.get_action_channelbag(action, slot=slot)
                         key_actions[obj.name] = (action, slot, channelbag)
         return key_actions
 
@@ -3837,7 +3843,7 @@ class CC3ImportProps(bpy.types.PropertyGroup):
                     if utils.action_exists(action):
                         slot_id = action_store.data_slot_id
                         slot = utils.get_action_slot(action, slot_id=slot_id)
-                        channelbag = utils.get_action_channelbag(action, slot)
+                        channelbag = utils.get_action_channelbag(action, slot=slot)
                         return action, slot, channelbag
         return None, None, None
 
